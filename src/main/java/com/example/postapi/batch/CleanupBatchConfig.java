@@ -4,15 +4,15 @@ import com.example.postapi.model.Post;
 import com.example.postapi.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.batch.core.Job;
-import org.springframework.batch.core.Step;
+import org.springframework.batch.core.job.Job;
+import org.springframework.batch.core.step.Step;
 import org.springframework.batch.core.job.builder.JobBuilder;
-import org.springframework.batch.core.launch.support.RunIdIncrementer;
+import org.springframework.batch.core.job.parameters.RunIdIncrementer;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
-import org.springframework.batch.item.ItemProcessor;
-import org.springframework.batch.item.ItemReader;
-import org.springframework.batch.item.ItemWriter;
+import org.springframework.batch.infrastructure.item.ItemProcessor;
+import org.springframework.batch.infrastructure.item.ItemReader;
+import org.springframework.batch.infrastructure.item.ItemWriter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -54,7 +54,8 @@ public class CleanupBatchConfig {
     public Step cleanupStep(JobRepository jobRepository,
                              PlatformTransactionManager transactionManager) {
         return new StepBuilder("cleanupStep", jobRepository)
-                .<Post, Post>chunk(100, transactionManager)
+                .<Post, Post>chunk(100)
+                .transactionManager(transactionManager)
                 .reader(unpublishedPostReader())
                 .processor(softDeleteProcessor())
                 .writer(softDeleteWriter())

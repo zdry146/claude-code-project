@@ -2,7 +2,7 @@ package com.example.postapi.batch;
 
 import com.example.postapi.model.Post;
 import org.junit.jupiter.api.Test;
-import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.infrastructure.item.ItemProcessor;
 
 import static org.junit.jupiter.api.Assertions.*;
 

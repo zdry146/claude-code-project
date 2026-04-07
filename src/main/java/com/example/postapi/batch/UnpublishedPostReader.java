@@ -3,7 +3,7 @@ package com.example.postapi.batch;
 import com.example.postapi.model.Post;
 import com.example.postapi.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.batch.item.ItemReader;
+import org.springframework.batch.infrastructure.item.ItemReader;
 
 import java.time.LocalDateTime;
 import java.util.Iterator;

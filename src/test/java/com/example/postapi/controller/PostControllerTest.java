@@ -1,17 +1,21 @@
 package com.example.postapi.controller;
 
+import com.example.postapi.exception.GlobalExceptionHandler;
 import com.example.postapi.exception.NotFoundException;
 import com.example.postapi.response.ApiResult;
 import com.example.postapi.response.PageResponse;
 import com.example.postapi.response.PostResponse;
 import com.example.postapi.service.PostService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -22,14 +26,23 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(PostController.class)
+@ExtendWith(MockitoExtension.class)
 class PostControllerTest {
 
-    @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @Mock
     private PostService postService;
+
+    @InjectMocks
+    private PostController postController;
+
+    @BeforeEach
+    void setUp() {
+        mockMvc = MockMvcBuilders.standaloneSetup(postController)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+    }
 
     private PostResponse makePost(Long id, String title) {
         return PostResponse.builder()

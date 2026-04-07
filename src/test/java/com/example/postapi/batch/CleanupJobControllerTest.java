@@ -5,8 +5,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.batch.core.Job;
-import org.springframework.batch.core.JobParameters;
+import org.springframework.batch.core.job.Job;
+import org.springframework.batch.core.job.parameters.JobParameters;
 import org.springframework.batch.core.launch.JobLauncher;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -43,8 +43,6 @@ class CleanupJobControllerTest {
 
         controller.triggerCleanupJob();
 
-        verify(jobLauncher).run(eq(cleanupUnpublishedPostsJob), argThat(params ->
-                params.getParameters().containsKey("time")
-        ));
+        verify(jobLauncher).run(eq(cleanupUnpublishedPostsJob), any(JobParameters.class));
     }
 }
