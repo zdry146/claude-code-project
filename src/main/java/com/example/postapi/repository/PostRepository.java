@@ -30,4 +30,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Modifying
     @Query("UPDATE Post p SET p.likeCount = p.likeCount + 1 WHERE p.id = :id")
     void incrementLikeCount(@Param("id") Long id);
+
+    @Query("SELECT p FROM Post p WHERE p.isPublished = false AND p.isDeleted = false AND p.createdAt < :cutoffDate")
+    java.util.List<Post> findUnpublishedOlderThan(@Param("cutoffDate") java.time.LocalDateTime cutoffDate);
 }
