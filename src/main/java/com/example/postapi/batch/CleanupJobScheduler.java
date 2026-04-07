@@ -2,7 +2,8 @@ package com.example.postapi.batch;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.job.Job;
-import org.springframework.batch.core.launch.JobLauncher;
+import org.springframework.batch.core.job.parameters.JobParameters;
+import org.springframework.batch.core.launch.JobOperator;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -10,11 +11,11 @@ import org.springframework.stereotype.Component;
 @Component
 public class CleanupJobScheduler {
 
-    private final JobLauncher jobLauncher;
+    private final JobOperator jobOperator;
     private final Job cleanupUnpublishedPostsJob;
 
     @Scheduled(cron = "0 0 0 * * ?")
     public void runCleanupJob() throws Exception {
-        jobLauncher.run(cleanupUnpublishedPostsJob, new org.springframework.batch.core.job.parameters.JobParameters());
+        jobOperator.start(cleanupUnpublishedPostsJob.getName(), new JobParameters());
     }
 }

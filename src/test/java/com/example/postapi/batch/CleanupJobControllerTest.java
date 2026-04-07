@@ -6,18 +6,20 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.batch.core.job.Job;
-import org.springframework.batch.core.job.parameters.JobParameters;
-import org.springframework.batch.core.launch.JobLauncher;
+import org.springframework.batch.core.launch.JobOperator;
+
+import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class CleanupJobControllerTest {
 
     @Mock
-    private JobLauncher jobLauncher;
+    private JobOperator jobOperator;
 
     @Mock
     private Job cleanupUnpublishedPostsJob;
@@ -27,22 +29,23 @@ class CleanupJobControllerTest {
 
     @Test
     void triggerCleanupJob_shouldLaunchJobWithParameters() throws Exception {
-        when(jobLauncher.run(eq(cleanupUnpublishedPostsJob), any(JobParameters.class)))
+        when(jobOperator.start(any(), any(Properties.class)))
                 .thenReturn(null);
 
         String result = controller.triggerCleanupJob();
 
         assertEquals("Cleanup job triggered successfully", result);
-        verify(jobLauncher, times(1)).run(eq(cleanupUnpublishedPostsJob), any(JobParameters.class));
+        verify(jobOperator, times(1)).start(any(), any(Properties.class));
     }
 
     @Test
-    void triggerCleanupJob_shouldPassJobParametersWithTimestamp() throws Exception {
-        when(jobLauncher.run(any(Job.class), any(JobParameters.class)))
+    void triggerCleanupJob_shouldPassJobNameAndParameters() throws Exception {
+        when(cleanupUnpublishedPostsJob.getName()).thenReturn("cleanupUnpublishedPostsJob");
+        when(jobOperator.start(any(), any(Properties.class)))
                 .thenReturn(null);
 
         controller.triggerCleanupJob();
 
-        verify(jobLauncher).run(eq(cleanupUnpublishedPostsJob), any(JobParameters.class));
+        verify(jobOperator).start(eq("cleanupUnpublishedPostsJob"), any(Properties.class));
     }
 }
