@@ -11,7 +11,7 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "posts")
+@Table(name = "posts", indexes = @Index(name = "idx_posts_title", columnList = "title"))
 @Data
 @Builder
 @NoArgsConstructor
