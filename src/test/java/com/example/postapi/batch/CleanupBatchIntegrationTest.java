@@ -45,7 +45,8 @@ class CleanupBatchIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        postRepository.deleteAll();
+        // Only delete posts created by this test, not all posts
+        deleteTestPosts();
         now = LocalDateTime.now();
 
         // Posts older than 30 days - unpublished (SHOULD be deleted)
@@ -72,6 +73,16 @@ class CleanupBatchIntegrationTest {
             """,
             authorName, content, ts, isPublished, likeCount, title, nowTs, viewCount
         );
+    }
+
+    private void deleteTestPosts() {
+        String[] testTitles = {
+            "Old Unpublished Post 1", "Old Unpublished Post 2", "Old Unpublished Post 3",
+            "Recent Unpublished Post 1", "Recent Unpublished Post 2", "Old Published Post"
+        };
+        for (String title : testTitles) {
+            jdbcTemplate.update("DELETE FROM posts WHERE title = ?", title);
+        }
     }
 
     @Test
