@@ -104,35 +104,53 @@ pipeline {
                 }
             }
         }
-        stage('Ensure image pull secret') {
+        stage('Ensure namespace + image pull secret') {
             when { expression { params.MODE == 'cd' || params.MODE == 'both' } }
             steps {
+                // Create the namespace first (idempotent) so subsequent
+                // `kubectl -n ${params.NAMESPACE} ...` commands succeed.
                 sh """
                 set -euo pipefail
-                kubectl -n ${params.NAMESPACE} create secret docker-registry aliyun-registry-cred \
-                    --docker-server=${env.ALIYUN_REGISTRY} \
-                    --docker-username=${env.ALIYUN_DOCKER_CREDS_USR} \
-                    --docker-password=${env.ALIYUN_DOCKER_CREDS_PSW} \
-                    --dry-run=client -o yaml | kubectl apply -f -
+                kubectl apply -f k8s/namespace.yaml
                 """
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'aliyun-docker-login',
+                        usernameVariable: 'ALIYUN_DOCKER_CREDS_USR',
+                        passwordVariable: 'ALIYUN_DOCKER_CREDS_PSW'
+                    )
+                ]) {
+                    // secrets stay as bash vars (\$VAR) so they're never interpolated by Groovy
+                    sh """
+                    set -euo pipefail
+                    kubectl -n ${params.NAMESPACE} create secret docker-registry aliyun-registry-cred \\
+                        --docker-server=${env.ALIYUN_REGISTRY} \\
+                        --docker-username=\$ALIYUN_DOCKER_CREDS_USR \\
+                        --docker-password=\$ALIYUN_DOCKER_CREDS_PSW \\
+                        --dry-run=client -o yaml | kubectl apply -f -
+                    """
+                }
             }
         }
         stage('Apply manifests') {
             when { expression { params.MODE == 'cd' || params.MODE == 'both' } }
             steps {
-                sh """
-                set -euo pipefail
-                kubectl apply -f k8s/namespace.yaml
-                # db-credentials Secret is generated from the Jenkins 'db-password' credential at deploy time.
-                kubectl -n ${params.NAMESPACE} create secret generic db-credentials \
-                    --from-literal=password="\${DB_PASSWORD}" \
-                    --dry-run=client -o yaml | kubectl apply -f -
-                # Substitute __DB_HOST__ / __DB_DATABASE__ / __IMAGE_TAG__ placeholders
-                sed -e "s|__DB_HOST__|${params.DB_HOST}|g" \
-                    -e "s|__DB_DATABASE__|${params.DB_DATABASE}|g" \
-                    -e "s|__IMAGE_TAG__|${env.DEPLOY_TAG}|g" \
-                    k8s/deployment.yaml | kubectl -n ${params.NAMESPACE} apply -f -
-                """
+                // DB password stays a bash var via withCredentials so Groovy
+                // never sees the plaintext (and no GString-interpolation warning).
+                withCredentials([string(credentialsId: 'db-password', variable: 'DB_PASSWORD')]) {
+                    sh """
+                    set -euo pipefail
+                    # db-credentials Secret is generated from the Jenkins 'db-password' credential at deploy time.
+                    kubectl -n ${params.NAMESPACE} create secret generic db-credentials \\
+                        --from-literal=password="\$DB_PASSWORD" \\
+                        --dry-run=client -o yaml | kubectl apply -f -
+                    # Substitute __DB_HOST__ / __DB_DATABASE__ / __IMAGE_TAG__ placeholders
+                    sed -e "s|__DB_HOST__|${params.DB_HOST}|g" \\
+                        -e "s|__DB_DATABASE__|${params.DB_DATABASE}|g" \\
+                        -e "s|__IMAGE_TAG__|${env.DEPLOY_TAG}|g" \\
+                        k8s/deployment.yaml | kubectl -n ${params.NAMESPACE} apply -f -
+                    """
+                }
             }
         }
         stage('Wait for ready') {
@@ -147,26 +165,28 @@ pipeline {
         stage('Initialize DB schema + seed data') {
             when { expression { params.MODE == 'cd' || params.MODE == 'both' } }
             steps {
-                sh """
-                set -euo pipefail
-                # Run schema-postgres.sql + data.sql against the cluster-reachable
-                # PostgreSQL server. The Jenkins host (or a sidecar pod with
-                # psql installed) is used to avoid the brittle "psql inside
-                # post-api pod" path.
-                #
-                # Uses PGPASSWORD env var injected from the db-password
-                # Jenkins credential (DB_PASSWORD). psql must be on PATH.
-                export PGPASSWORD="\$DB_PASSWORD"
-                PSQL="psql -h ${params.DB_HOST} -p 5432 -U postgres -d ${params.DB_DATABASE} -v ON_ERROR_STOP=1"
-                echo "Applying schema..."
-                # Filter out the BATCH_JOB_SEQ lines that use deprecated
-                # NO CACHE NO CYCLE syntax (PostgreSQL 17+ rejects this).
-                grep -v "BATCH_JOB" post-api/src/main/resources/schema-postgres.sql | \$PSQL
-                echo "Truncating and re-seeding posts..."
-                \$PSQL -c "TRUNCATE TABLE posts RESTART IDENTITY CASCADE;" || true
-                \$PSQL -f post-api/src/main/resources/data.sql
-                echo "DB schema and seed data initialized"
-                """
+                withCredentials([string(credentialsId: 'db-password', variable: 'DB_PASSWORD')]) {
+                    sh """
+                    set -euo pipefail
+                    # Run schema-postgres.sql + data.sql against the cluster-reachable
+                    # PostgreSQL server. The Jenkins host (or a sidecar pod with
+                    # psql installed) is used to avoid the brittle "psql inside
+                    # post-api pod" path.
+                    #
+                    # Uses PGPASSWORD env var injected from the db-password
+                    # Jenkins credential (DB_PASSWORD). psql must be on PATH.
+                    export PGPASSWORD="\$DB_PASSWORD"
+                    PSQL="psql -h ${params.DB_HOST} -p 5432 -U postgres -d ${params.DB_DATABASE} -v ON_ERROR_STOP=1"
+                    echo "Applying schema..."
+                    # Filter out the BATCH_JOB_SEQ lines that use deprecated
+                    # NO CACHE NO CYCLE syntax (PostgreSQL 17+ rejects this).
+                    grep -v "BATCH_JOB" post-api/src/main/resources/schema-postgres.sql | \$PSQL
+                    echo "Truncating and re-seeding posts..."
+                    \$PSQL -c "TRUNCATE TABLE posts RESTART IDENTITY CASCADE;" || true
+                    \$PSQL -f post-api/src/main/resources/data.sql
+                    echo "DB schema and seed data initialized"
+                    """
+                }
             }
         }
         stage('E2E: Karate API tests') {
