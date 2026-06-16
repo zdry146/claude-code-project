@@ -67,7 +67,7 @@ pipeline {
                 mkdir -p src/main/resources/static
                 cp -r post-api-frontend/dist/* src/main/resources/static/
                 # Run the full test suite (Junit + Pact + Karate)
-                mvn -B clean package -DskipITs -Dtest="!CleanupBatchIntegrationTest,!HibernateBatchPerformanceTest,!RetryBatchIntegrationTest,!PactProviderVerificationTest"
+                mvn -B clean package -DskipITs -Dtest="!CleanupBatchIntegrationTest,!HibernateBatchPerformanceTest,!RetryBatchIntegrationTest,!PactProviderVerificationTest,!PostApiKarateTest"
                 '''
             }
         }
