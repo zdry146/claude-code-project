@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: post-api-svc
+  namespace: post-api
+spec:
+  selector:
+    app: post-api
+  ports:
+    - port: 8081
+      targetPort: 8081
+      protocol: TCP
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: post-api
+  namespace: post-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: post-api
+  template:
+    metadata:
+      labels:
+        app: post-api
+    spec:
+      imagePullSecrets:
+        - name: aliyun-registry-cred
+      containers:
+        - name: post-api
+          image: crpi-e2h2rfj3kunrwe5n.cn-hangzhou.personal.cr.aliyuncs.com/mike-docker-registry/post-api:__IMAGE_TAG__
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8081
+          env:
+            - name: SERVER_PORT
+              value: "8081"
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://__DB_HOST__:5432/__DB_DATABASE__"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "postgres"
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: password
+            - name: SPRING_BATCH_JOB_ENABLED
+              value: "false"
+            - name: JAVA_OPTS
+              value: "-Xms256m -Xmx512m"
+          readinessProbe:
+            httpGet:
+              path: /api/posts/published
+              port: 8081
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 10
+          resources:
+            limits:
+              memory: "768Mi"
+              cpu: "500m"
+            requests:
+              memory: "384Mi"
+              cpu: "250m"
