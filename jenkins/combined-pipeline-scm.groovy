@@ -107,47 +107,47 @@ pipeline {
         stage('Ensure image pull secret') {
             when { expression { params.MODE == 'cd' || params.MODE == 'both' } }
             steps {
-                sh '''
+                sh """
                 set -euo pipefail
                 kubectl -n ${params.NAMESPACE} create secret docker-registry aliyun-registry-cred \
                     --docker-server=${env.ALIYUN_REGISTRY} \
-                    --docker-username=${ALIYUN_DOCKER_CREDS_USR} \
-                    --docker-password=${ALIYUN_DOCKER_CREDS_PSW} \
+                    --docker-username=${env.ALIYUN_DOCKER_CREDS_USR} \
+                    --docker-password=${env.ALIYUN_DOCKER_CREDS_PSW} \
                     --dry-run=client -o yaml | kubectl apply -f -
-                '''
+                """
             }
         }
         stage('Apply manifests') {
             when { expression { params.MODE == 'cd' || params.MODE == 'both' } }
             steps {
-                sh '''
+                sh """
                 set -euo pipefail
                 kubectl apply -f k8s/namespace.yaml
                 # db-credentials Secret is generated from the Jenkins 'db-password' credential at deploy time.
                 kubectl -n ${params.NAMESPACE} create secret generic db-credentials \
-                    --from-literal=password="${DB_PASSWORD}" \
+                    --from-literal=password="\${DB_PASSWORD}" \
                     --dry-run=client -o yaml | kubectl apply -f -
                 # Substitute __DB_HOST__ / __DB_DATABASE__ / __IMAGE_TAG__ placeholders
                 sed -e "s|__DB_HOST__|${params.DB_HOST}|g" \
                     -e "s|__DB_DATABASE__|${params.DB_DATABASE}|g" \
                     -e "s|__IMAGE_TAG__|${env.DEPLOY_TAG}|g" \
                     k8s/deployment.yaml | kubectl -n ${params.NAMESPACE} apply -f -
-                '''
+                """
             }
         }
         stage('Wait for ready') {
             when { expression { params.MODE == 'cd' || params.MODE == 'both' } }
             steps {
-                sh '''
+                sh """
                 set -euo pipefail
                 kubectl -n ${params.NAMESPACE} rollout status deployment/post-api --timeout=180s
-                '''
+                """
             }
         }
         stage('Initialize DB schema + seed data') {
             when { expression { params.MODE == 'cd' || params.MODE == 'both' } }
             steps {
-                sh '''
+                sh """
                 set -euo pipefail
                 # Run schema-postgres.sql + data.sql against the cluster-reachable
                 # PostgreSQL server. The Jenkins host (or a sidecar pod with
@@ -156,60 +156,60 @@ pipeline {
                 #
                 # Uses PGPASSWORD env var injected from the db-password
                 # Jenkins credential (DB_PASSWORD). psql must be on PATH.
-                export PGPASSWORD="$DB_PASSWORD"
+                export PGPASSWORD="\$DB_PASSWORD"
                 PSQL="psql -h ${params.DB_HOST} -p 5432 -U postgres -d ${params.DB_DATABASE} -v ON_ERROR_STOP=1"
                 echo "Applying schema..."
                 # Filter out the BATCH_JOB_SEQ lines that use deprecated
                 # NO CACHE NO CYCLE syntax (PostgreSQL 17+ rejects this).
-                grep -v "BATCH_JOB" post-api/src/main/resources/schema-postgres.sql | $PSQL
+                grep -v "BATCH_JOB" post-api/src/main/resources/schema-postgres.sql | \$PSQL
                 echo "Truncating and re-seeding posts..."
-                $PSQL -c "TRUNCATE TABLE posts RESTART IDENTITY CASCADE;" || true
-                $PSQL -f post-api/src/main/resources/data.sql
+                \$PSQL -c "TRUNCATE TABLE posts RESTART IDENTITY CASCADE;" || true
+                \$PSQL -f post-api/src/main/resources/data.sql
                 echo "DB schema and seed data initialized"
-                '''
+                """
             }
         }
         stage('E2E: Karate API tests') {
             when { expression { params.MODE == 'cd' || params.MODE == 'both' } }
             steps {
-                sh '''
+                sh """
                 set -euo pipefail
                 # Port-forward to the running deployment
                 kubectl -n ${params.NAMESPACE} port-forward deployment/post-api 8083:8081 &
-                PF_PID=$!
+                PF_PID=\$!
                 sleep 8
-                trap "kill $PF_PID 2>/dev/null || true" EXIT
+                trap "kill \$PF_PID 2>/dev/null || true" EXIT
 
                 # Wait for API to be ready
-                for i in $(seq 1 30); do
+                for i in \$(seq 1 30); do
                     if curl -sf http://localhost:8083/api/posts/published?size=1 >/dev/null 2>&1; then
                         echo "API is ready"
                         break
                     fi
-                    echo "Waiting for API... ($i)"
+                    echo "Waiting for API... (\$i)"
                     sleep 3
                 done
 
                 mvn -B test -Dtest=PostApiKarateTest -DbaseUrl=http://localhost:8083
-                '''
+                """
             }
         }
         stage('E2E: Playwright UI tests') {
             when { expression { params.MODE == 'cd' || params.MODE == 'both' } }
             steps {
-                sh '''
+                sh """
                 set -euo pipefail
                 # Reuses the port-forward from the Karate stage if still alive
                 if ! pgrep -f "kubectl port-forward.*${params.NAMESPACE}" >/dev/null; then
                     kubectl -n ${params.NAMESPACE} port-forward deployment/post-api 8083:8081 &
-                    PF_PID=$!
+                    PF_PID=\$!
                     sleep 5
-                    trap "kill $PF_PID 2>/dev/null || true" EXIT
+                    trap "kill \$PF_PID 2>/dev/null || true" EXIT
                 fi
                 # Run Playwright tests against the embedded React UI (already built in Build stage)
                 cd post-api-frontend
                 npx playwright test --reporter=list
-                '''
+                """
             }
         }
     }
