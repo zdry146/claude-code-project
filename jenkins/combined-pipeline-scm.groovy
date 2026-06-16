@@ -162,33 +162,9 @@ pipeline {
                 """
             }
         }
-        stage('Initialize DB schema + seed data') {
-            when { expression { params.MODE == 'cd' || params.MODE == 'both' } }
-            steps {
-                withCredentials([string(credentialsId: 'db-password', variable: 'DB_PASSWORD')]) {
-                    sh """
-                    set -euo pipefail
-                    # Run schema-postgres.sql + data.sql against the cluster-reachable
-                    # PostgreSQL server. The Jenkins host (or a sidecar pod with
-                    # psql installed) is used to avoid the brittle "psql inside
-                    # post-api pod" path.
-                    #
-                    # Uses PGPASSWORD env var injected from the db-password
-                    # Jenkins credential (DB_PASSWORD). psql must be on PATH.
-                    export PGPASSWORD="\$DB_PASSWORD"
-                    PSQL="psql -h ${params.DB_HOST} -p 5432 -U postgres -d ${params.DB_DATABASE} -v ON_ERROR_STOP=1"
-                    echo "Applying schema..."
-                    # Filter out the BATCH_JOB_SEQ lines that use deprecated
-                    # NO CACHE NO CYCLE syntax (PostgreSQL 17+ rejects this).
-                    grep -v "BATCH_JOB" post-api/src/main/resources/schema-postgres.sql | \$PSQL
-                    echo "Truncating and re-seeding posts..."
-                    \$PSQL -c "TRUNCATE TABLE posts RESTART IDENTITY CASCADE;" || true
-                    \$PSQL -f post-api/src/main/resources/data.sql
-                    echo "DB schema and seed data initialized"
-                    """
-                }
-            }
-        }
+        // Schema + seed data initialization moved into the application:
+        //   com.example.postapi.config.SchemaInitializer (CommandLineRunner)
+        // runs schema-postgres.sql + data.sql on first boot via JdbcTemplate.
         stage('E2E: Karate API tests') {
             when { expression { params.MODE == 'cd' || params.MODE == 'both' } }
             steps {
