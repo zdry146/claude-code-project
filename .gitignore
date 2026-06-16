@@ -63,3 +63,6 @@ scripts/local-*
 .DS_Store
 Thumbs.db
 .claude/settings.json
+
+# Jenkins job configs — contain sensitive credentials, never commit
+jenkins/
