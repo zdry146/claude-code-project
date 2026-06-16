@@ -190,7 +190,6 @@ pipeline {
                     sleep 3
                 done
 
-                cd post-api
                 mvn -B test -Dtest=PostApiKarateTest -DbaseUrl=http://localhost:8083
                 '''
             }
