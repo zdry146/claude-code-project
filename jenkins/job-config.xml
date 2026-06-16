@@ -1,0 +1,86 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<flow-definition plugin="workflow-job@1571.1580.v18e46842c125">
+  <actions>
+    <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobAction plugin="pipeline-model-definition@2.2277.v00573e73ddf1"/>
+    <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction plugin="pipeline-model-definition@2.2277.v00573e73ddf1">
+      <jobProperties/>
+      <triggers/>
+      <parameters>
+        <string>MODE</string>
+        <string>IMAGE_TAG</string>
+        <string>NAMESPACE</string>
+        <string>DB_HOST</string>
+        <string>DB_DATABASE</string>
+        <string>FRONTEND_REPO_URL</string>
+        <string>FRONTEND_BRANCH</string>
+      </parameters>
+      <options/>
+    </org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction>
+  </actions>
+  <description>Full pipeline for post-api: CI (build + test + push) and CD (deploy + E2E). Includes Karate API tests + Playwright UI tests as the E2E stage.</description>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <hudson.model.ParametersDefinitionProperty>
+      <parameterDefinitions>
+        <hudson.model.ChoiceParameterDefinition>
+          <name>MODE</name>
+          <description>ci = build+test+push, cd = deploy to k8s and run E2E, both = ci then cd in one run</description>
+          <choices>
+            <string>ci</string>
+            <string>cd</string>
+            <string>both</string>
+          </choices>
+        </hudson.model.ChoiceParameterDefinition>
+        <hudson.model.ChoiceParameterDefinition>
+          <name>IMAGE_TAG</name>
+          <description>Image tag to deploy (cd mode only; ignored when MODE=both or ci)</description>
+          <choices>
+            <string>latest</string>
+            <string>1.0.0</string>
+          </choices>
+        </hudson.model.ChoiceParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>NAMESPACE</name>
+          <description>Kubernetes namespace (cd mode only)</description>
+          <defaultValue>post-api</defaultValue>
+          <trim>false</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>DB_HOST</name>
+          <description>PostgreSQL host (cluster-reachable IP/hostname) injected into deployment.yaml (cd mode only).</description>
+          <defaultValue>192.168.232.128</defaultValue>
+          <trim>false</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>DB_DATABASE</name>
+          <description>PostgreSQL database name (cd mode only).</description>
+          <defaultValue>testdb</defaultValue>
+          <trim>false</trim>
+        </hudson.model.StringParameterDefinition>
+      </parameterDefinitions>
+    </hudson.model.ParametersDefinitionProperty>
+  </properties>
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition" plugin="workflow-cps@4331.v9d06ed4658ff">
+    <scm class="hudson.plugins.git.GitSCM" plugin="git@5.10.1">
+      <configVersion>2</configVersion>
+      <userRemoteConfigs>
+        <hudson.plugins.git.UserRemoteConfig>
+          <url>https://github.com/zdry146/claude-code-project.git</url>
+          <credentialsId>git-cred</credentialsId>
+        </hudson.plugins.git.UserRemoteConfig>
+      </userRemoteConfigs>
+      <branches>
+        <hudson.plugins.git.BranchSpec>
+          <name>**/jdk17-and-spring3</name>
+        </hudson.plugins.git.BranchSpec>
+      </branches>
+      <doGenerateSubmoduleConfigurations>false</doGenerateSubmoduleConfigurations>
+      <submoduleCfg class="empty-list"/>
+      <extensions/>
+    </scm>
+    <scriptPath>post-api/jenkins/combined-pipeline-scm.groovy</scriptPath>
+    <lightweight>true</lightweight>
+  </definition>
+  <triggers/>
+  <disabled>false</disabled>
+</flow-definition>
