@@ -64,5 +64,3 @@ scripts/local-*
 Thumbs.db
 .claude/settings.json
 
-# Jenkins job configs — contain sensitive credentials, never commit
-jenkins/
