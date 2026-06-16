@@ -37,3 +37,28 @@ Thumbs.db
 # Application
 server.log
 posts_data.json
+
+# IDE
+.vscode/
+.idea/
+
+# Build artifacts
+dist/
+target/
+*.class
+
+# Node_modules (everywhere)
+node_modules/
+
+# Test results & coverage
+test-results/
+playwright-report/
+/coverage/
+
+# Temp/debug scripts
+scripts/*.log
+scripts/local-*
+
+# OS
+.DS_Store
+Thumbs.db

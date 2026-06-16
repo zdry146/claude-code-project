@@ -1,0 +1,20 @@
+{
+  "name": "openapi-tests",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "node validate-spec.js && jest",
+    "validate": "node validate-spec.js",
+    "spectral": "jest spectral-validate.test.js",
+    "contract": "node contract-test.js"
+  },
+  "dependencies": {
+    "@stoplight/spectral-core": "^6.18.0",
+    "@stoplight/spectral-functions": "^6.18.0",
+    "@stoplight/spectral-parsers": "^6.13.0",
+    "@stoplight/spectral-rulesets": "^6.18.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}

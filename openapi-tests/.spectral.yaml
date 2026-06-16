@@ -1,0 +1,8 @@
+extends: [[spectral:oas, recommended]]
+rules:
+  operation-operationId: error
+  operation-tags: error
+  path-params: error
+  oas3-valid-media-example: warn
+  openapi-tags: warn
+  operation-description: warn

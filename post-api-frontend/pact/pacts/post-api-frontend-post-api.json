@@ -1,0 +1,232 @@
+{
+  "consumer": {
+    "name": "post-api-frontend"
+  },
+  "provider": {
+    "name": "post-api"
+  },
+  "interactions": [
+    {
+      "description": "GET /api/posts/published \u2014 list published posts (paginated)",
+      "request": {
+        "method": "GET",
+        "path": "/api/posts/published",
+        "query": {
+          "page": "0",
+          "size": "10"
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "code": 200,
+          "message": "success",
+          "data": {
+            "content": [
+              {
+                "id": 1,
+                "title": "Post Title",
+                "content": "Content",
+                "authorName": "Author",
+                "coverImage": null,
+                "viewCount": 0,
+                "likeCount": 0,
+                "isPublished": true,
+                "createdAt": "2026-01-01T00:00:00",
+                "updatedAt": "2026-01-01T00:00:00"
+              }
+            ],
+            "page": 0,
+            "size": 10,
+            "totalElements": 0,
+            "totalPages": 0,
+            "first": true,
+            "last": true
+          }
+        }
+      },
+      "type": "Synchronous/HTTP"
+    },
+    {
+      "description": "POST /api/posts \u2014 create new post",
+      "request": {
+        "method": "POST",
+        "path": "/api/posts",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "title": "My Post",
+          "content": "Content",
+          "authorName": "Author"
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "code": 200,
+          "message": "success",
+          "data": {
+            "id": 1
+          }
+        }
+      },
+      "type": "Synchronous/HTTP"
+    },
+    {
+      "description": "GET /api/posts/{id} \u2014 get post by id",
+      "request": {
+        "method": "GET",
+        "path": "/api/posts/1"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "code": 200,
+          "data": {
+            "id": 1,
+            "title": "Post",
+            "authorName": "Author"
+          }
+        }
+      },
+      "type": "Synchronous/HTTP"
+    },
+    {
+      "description": "PUT /api/posts/{id} \u2014 update post",
+      "request": {
+        "method": "PUT",
+        "path": "/api/posts/1",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "title": "Updated",
+          "content": "Updated"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "code": 200,
+          "message": "success"
+        }
+      },
+      "type": "Synchronous/HTTP"
+    },
+    {
+      "description": "DELETE /api/posts/{id} \u2014 delete post",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/posts/1"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "code": 200
+        }
+      },
+      "type": "Synchronous/HTTP"
+    },
+    {
+      "description": "POST /api/posts/{id}/like \u2014 like post",
+      "request": {
+        "method": "POST",
+        "path": "/api/posts/1/like"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "code": 200,
+          "data": {
+            "likeCount": 1
+          }
+        }
+      },
+      "type": "Synchronous/HTTP"
+    },
+    {
+      "description": "POST /api/posts/{id}/toggle-publish \u2014 toggle publish",
+      "request": {
+        "method": "POST",
+        "path": "/api/posts/1/toggle-publish"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "code": 200,
+          "data": {
+            "isPublished": true
+          }
+        }
+      },
+      "type": "Synchronous/HTTP"
+    },
+    {
+      "description": "GET /api/posts/search \u2014 search posts",
+      "request": {
+        "method": "GET",
+        "path": "/api/posts/search",
+        "query": {
+          "keyword": "test"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "code": 200,
+          "data": {
+            "content": [
+              {
+                "id": 1
+              }
+            ]
+          }
+        }
+      },
+      "type": "Synchronous/HTTP"
+    },
+    {
+      "description": "GET /api/posts/all \u2014 admin list all posts",
+      "request": {
+        "method": "GET",
+        "path": "/api/posts/all",
+        "query": {
+          "page": "0",
+          "size": "10"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "code": 200,
+          "data": {
+            "content": [],
+            "page": 0,
+            "size": 10,
+            "totalElements": 0,
+            "totalPages": 0
+          }
+        }
+      },
+      "type": "Synchronous/HTTP"
+    }
+  ],
+  "metadata": {
+    "pactSpecification": {
+      "version": "4.0"
+    },
+    "pactfile": {
+      "tool": "pact-consumer-test"
+    }
+  }
+}
