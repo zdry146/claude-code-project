@@ -16,6 +16,6 @@ public class CleanupJobScheduler {
 
     @Scheduled(cron = "0 0 0 * * ?")
     public void runCleanupJob() throws Exception {
-        jobOperator.start(cleanupUnpublishedPostsJob.getName(), new JobParameters());
+        jobOperator.start(cleanupUnpublishedPostsJob, new JobParameters());
     }
 }
