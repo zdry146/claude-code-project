@@ -64,10 +64,9 @@ pipeline {
                 npx vite build
                 cd ..
                 # Embed the React frontend dist/ into the Spring Boot jar
-                mkdir -p post-api/src/main/resources/static
-                cp -r post-api-frontend/dist/* post-api/src/main/resources/static/
+                mkdir -p src/main/resources/static
+                cp -r post-api-frontend/dist/* src/main/resources/static/
                 # Run the full test suite (Junit + Pact + Karate)
-                cd post-api
                 mvn -B clean verify
                 '''
             }
@@ -78,7 +77,7 @@ pipeline {
                 script {
                     env.IMAGE_VERSION = sh(
                         label: 'Read project version',
-                        script: 'mvn -B -q -DforceStdout -Dexpression=project.version -f post-api/pom.xml help:evaluate',
+                        script: 'mvn -B -q -DforceStdout -Dexpression=project.version help:evaluate',
                         returnStdout: true
                     ).trim()
                 }
@@ -90,7 +89,6 @@ pipeline {
                 sh '''
                 set -euo pipefail
                 echo "$ALIYUN_DOCKER_CREDS_PSW" | docker login -u "$ALIYUN_DOCKER_CREDS_USR" --password-stdin "$ALIYUN_REGISTRY"
-                cd post-api
                 docker build -t "$FULL_IMAGE:$IMAGE_VERSION" -t "$FULL_IMAGE:latest" .
                 docker push "$FULL_IMAGE:$IMAGE_VERSION"
                 docker push "$FULL_IMAGE:latest"
@@ -124,7 +122,7 @@ pipeline {
             steps {
                 sh '''
                 set -euo pipefail
-                kubectl apply -f post-api/k8s/namespace.yaml
+                kubectl apply -f k8s/namespace.yaml
                 # db-credentials Secret is generated from the Jenkins 'db-password' credential at deploy time.
                 kubectl -n ${params.NAMESPACE} create secret generic db-credentials \
                     --from-literal=password="${DB_PASSWORD}" \
@@ -133,7 +131,7 @@ pipeline {
                 sed -e "s|__DB_HOST__|${params.DB_HOST}|g" \
                     -e "s|__DB_DATABASE__|${params.DB_DATABASE}|g" \
                     -e "s|__IMAGE_TAG__|${env.DEPLOY_TAG}|g" \
-                    post-api/k8s/deployment.yaml | kubectl -n ${params.NAMESPACE} apply -f -
+                    k8s/deployment.yaml | kubectl -n ${params.NAMESPACE} apply -f -
                 '''
             }
         }
