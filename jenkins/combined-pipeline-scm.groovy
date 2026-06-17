@@ -202,8 +202,13 @@ pipeline {
                     sleep 5
                     trap "kill \$PF_PID 2>/dev/null || true" EXIT
                 fi
-                # Run Playwright tests against the embedded React UI (already built in Build stage)
+                # Install frontend deps: this stage runs in MODE=cd / both, where
+                # the 'Build & test' stage (which would have run npm install) is
+                # skipped. So we need to npm install here too.
                 cd post-api-frontend
+                npm install --silent
+                # Install Playwright browsers (chromium etc.) into the agent's cache.
+                npx playwright install --with-deps chromium
                 npx playwright test --reporter=list
                 """
             }
