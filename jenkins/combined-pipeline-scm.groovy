@@ -207,8 +207,12 @@ pipeline {
                 # skipped. So we need to npm install here too.
                 cd post-api-frontend
                 npm install --silent
-                # Install Playwright browsers (chromium etc.) into the agent's cache.
-                npx playwright install --with-deps chromium
+                # Use the host's already-installed chromium instead of having
+                # Playwright download its bundled browser. The host kernel is
+                # 7.0.0-generic (Ubuntu 26.04), which Playwright 1.58.2 does
+                # not support for downloading. Host has /snap/bin/chromium.
+                export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+                export PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/snap/bin/chromium
                 npx playwright test --reporter=list
                 """
             }
