@@ -26,20 +26,36 @@ Feature: Post API E2E contract
     * def createdId = response.data.id
 
   Scenario: Get post by id
-    Given path 'api', 'posts', '1'
+    # Cleanup batch may mark old posts is_deleted=true, so we cannot
+    # assume id=1 exists. Create a fresh post and use its id.
+    Given path 'api', 'posts'
+    And request { title: 'Karate Get Test', content: 'Created for get-by-id test', authorName: 'Karate' }
+    And header Content-Type = 'application/json'
+    When method POST
+    Then status 200
+    * def getTestId = response.data.id
+    Given path 'api', 'posts', getTestId
     When method GET
     Then status 200
     And match response.code == 200
-    And match response.data.id == 1
+    And match response.data.id == getTestId
 
   Scenario: Update a post
-    Given path 'api', 'posts', '1'
+    # Same as above: create a fresh post to get a valid id (id=1 may be cleaned up)
+    Given path 'api', 'posts'
+    And request { title: 'Karate Update Source', content: 'Created for update test', authorName: 'Karate' }
+    And header Content-Type = 'application/json'
+    When method POST
+    Then status 200
+    * def updateTestId = response.data.id
+    Given path 'api', 'posts', updateTestId
     And request { title: 'Karate Updated', content: 'Updated by Karate' }
     And header Content-Type = 'application/json'
     When method PUT
     Then status 200
     And match response.code == 200
     And match response.data.title == 'Karate Updated'
+    And match response.data.id == updateTestId
 
   Scenario: Like a non-existent post returns 404
     Given path 'api', 'posts', '999999', 'like'
