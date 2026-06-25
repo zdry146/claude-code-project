@@ -67,8 +67,32 @@ pipeline {
                 mkdir -p src/main/resources/static
                 cp -r post-api-frontend/dist/* src/main/resources/static/
                 # Run the full test suite (Junit + Pact + Karate)
+                # NOTE: PactProviderVerificationTest is excluded until the PACT
+                # Broker is wired up; flip the ! prefix off once that lands.
                 mvn -B clean package -DskipITs -Dtest="!CleanupBatchIntegrationTest,!HibernateBatchPerformanceTest,!RetryBatchIntegrationTest,!PactProviderVerificationTest,!PostApiKarateTest"
                 '''
+            }
+        }
+        stage('SonarQube analysis') {
+            when { expression { params.MODE == 'ci' || params.MODE == 'both' } }
+            steps {
+                withSonarQubeEnv('local-sonarqube') {
+                    // withSonarQubeEnv injects SONAR_HOST_URL + SONAR_AUTH_TOKEN
+                    // from the 'local-sonarqube' installation in
+                    // Manage Jenkins > System > SonarQube servers.
+                    sh '''
+                    set -euo pipefail
+                    mvn -B sonar:sonar \
+                      -Dsonar.projectKey=post-api \
+                      -Dsonar.projectName='Post API' \
+                      -Dsonar.exclusions='src/main/resources/static/**,post-api-frontend/**,target/**,**/*.min.js'
+                    '''
+                }
+                // Block until the SonarQube Quality Gate is evaluated.
+                // Fails the build if the gate is RED. Tune wait time as needed.
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
             }
         }
         stage('Determine image version') {
