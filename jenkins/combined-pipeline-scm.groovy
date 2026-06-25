@@ -76,22 +76,49 @@ pipeline {
         stage('SonarQube analysis') {
             when { expression { params.MODE == 'ci' || params.MODE == 'both' } }
             steps {
-                withSonarQubeEnv('local-sonarqube') {
-                    // withSonarQubeEnv injects SONAR_HOST_URL + SONAR_AUTH_TOKEN
-                    // from the 'local-sonarqube' installation in
-                    // Manage Jenkins > System > SonarQube servers.
-                    sh '''
-                    set -euo pipefail
-                    mvn -B sonar:sonar \
-                      -Dsonar.projectKey=post-api \
-                      -Dsonar.projectName='Post API' \
-                      -Dsonar.exclusions='src/main/resources/static/**,post-api-frontend/**,target/**,**/*.min.js'
-                    '''
-                }
-                // Block until the SonarQube Quality Gate is evaluated.
-                // Fails the build if the gate is RED. Tune wait time as needed.
-                timeout(time: 5, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
+                script {
+                    withSonarQubeEnv('local-sonarqube') {
+                        // withSonarQubeEnv injects SONAR_HOST_URL + SONAR_AUTH_TOKEN
+                        // from the 'local-sonarqube' installation in
+                        // Manage Jenkins > System > SonarQube servers.
+                        sh '''
+                        set -euo pipefail
+                        mvn -B sonar:sonar \
+                          -Dsonar.projectKey=post-api \
+                          -Dsonar.projectName='Post API' \
+                          -Dsonar.exclusions='src/main/resources/static/**,post-api-frontend/**,target/**,**/*.min.js'
+                        '''
+
+                        // ---- Quality Gate check (curl-based) ----
+                        // We deliberately do NOT use `waitForQualityGate` here. The
+                        // plugin's OkHttp client hits a JDK 21 + glibc bug in the
+                        // Socket.connect(unresolved_addr) async DNS path
+                        // (UnknownHostException for any unresolved hostname/IP),
+                        // which breaks the gate-poll request. Using curl (a
+                        // subprocess) sidesteps the JVM and works fine.
+                        //
+                        // Status semantics from /api/qualitygates/project_status:
+                        //   OK    -> pass
+                        //   WARN  -> yellow, mark unstable but continue
+                        //   ERROR -> red, fail the build
+                        //   PENDING / NONE -> still being evaluated, keep polling
+                        def qgStatus = ''
+                        timeout(time: 5, unit: 'MINUTES') {
+                            waitUntil {
+                                qgStatus = sh(
+                                    script: 'curl -fsS -u "${SONAR_AUTH_TOKEN}:" "${SONAR_HOST_URL}/api/qualitygates/project_status?projectKey=post-api" | jq -r \'.projectStatus.status\'',
+                                    returnStdout: true
+                                ).trim()
+                                echo "SonarQube Quality Gate status: ${qgStatus}"
+                                return ['OK', 'WARN', 'ERROR'].contains(qgStatus)
+                            }
+                        }
+                        if (qgStatus == 'ERROR') {
+                            error("SonarQube Quality Gate failed (status=${qgStatus})")
+                        } else if (qgStatus == 'WARN') {
+                            unstable("SonarQube Quality Gate warning (status=${qgStatus})")
+                        }
+                    }
                 }
             }
         }
