@@ -2,9 +2,12 @@
 
 ## Jenkins Integration
 
-The three Jenkins jobs (`post-api-ci`, `-cd`, `-cicd`) are
-**Pipeline script** (NOT "from SCM") wrapping
+The single Jenkins job `post-api-cicd` is a **Pipeline script** (NOT
+"from SCM") wrapping
 [`jenkins/wrappers/git-fallback-wrapper.groovy`](jenkins/wrappers/git-fallback-wrapper.groovy).
+It is parameterized with `MODE=ci|cd|both` — pick the stage set per build.
+(Standalone `-ci` / `-cd` jobs were removed 2026-06-28; this job covers
+both via the `MODE` parameter.)
 
 ### Why not "Pipeline from SCM"?
 
