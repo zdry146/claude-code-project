@@ -69,7 +69,17 @@ pipeline {
                 # Run the full test suite (Junit + Pact + Karate)
                 # NOTE: PactProviderVerificationTest is excluded until the PACT
                 # Broker is wired up; flip the ! prefix off once that lands.
-                mvn -B clean package -DskipITs -Dtest="!CleanupBatchIntegrationTest,!HibernateBatchPerformanceTest,!RetryBatchIntegrationTest,!PactProviderVerificationTest,!PostApiKarateTest"
+                #
+                # Why `verify` instead of `package`: jacoco-maven-plugin's
+                # `report` goal is bound to the verify phase, not package.
+                # SonarQube reads target/site/jacoco/jacoco.xml at analysis
+                # time, so the report has to exist before that stage runs.
+                # `mvn package` would skip the report and the quality gate
+                # would fail with `new_coverage = 0%` because the JaCoCo
+                # XML Report Importer sensor finds nothing to import.
+                # `-DskipITs` keeps the `*IT.java` integration tests out
+                # of the verify phase even though it's now in scope.
+                mvn -B clean verify -DskipITs -Dtest="!CleanupBatchIntegrationTest,!HibernateBatchPerformanceTest,!RetryBatchIntegrationTest,!PactProviderVerificationTest,!PostApiKarateTest"
                 '''
             }
         }
