@@ -256,13 +256,29 @@ pipeline {
             steps {
                 sh """
                 set -euo pipefail
-                # Reuses the port-forward from the Karate stage if still alive
-                if ! pgrep -f "kubectl port-forward.*${params.NAMESPACE}" >/dev/null; then
-                    kubectl -n ${params.NAMESPACE} port-forward deployment/post-api 8083:8081 &
-                    PF_PID=\$!
-                    sleep 5
-                    trap "kill \$PF_PID 2>/dev/null || true" EXIT
-                fi
+                # Kill any leftover port-forward from the Karate stage
+                # (its `trap kill ... EXIT` should have done this, but a
+                # backgrounded `&` process can outlive the sh step that
+                # spawned it, so be explicit). Then start a fresh
+                # port-forward and wait until the API actually responds
+                # before launching Playwright. The previous version's
+                # `sleep 5` was a race — port-forward isn't always ready
+                # when Playwright probes webServer.port=8083, and the
+                # placeholder `webServer.command='echo ...'` exits
+                # immediately, leading to "Process from config.webServer
+                # exited early" and an aborted test run.
+                pkill -f "kubectl port-forward.*${params.NAMESPACE}" 2>/dev/null || true
+                kubectl -n ${params.NAMESPACE} port-forward deployment/post-api 8083:8081 >/dev/null 2>&1 &
+                PF_PID=\$!
+                # Wait up to 60s for the port-forward to actually be serving the API.
+                for i in \$(seq 1 30); do
+                    if curl -sf http://localhost:8083/api/posts/published?size=1 >/dev/null 2>&1; then
+                        echo "Port-forward ready (try \$i)"
+                        break
+                    fi
+                    sleep 2
+                done
+                trap "kill \$PF_PID 2>/dev/null || true" EXIT
                 # Install frontend deps: this stage runs in MODE=cd / both, where
                 # the 'Build & test' stage (which would have run npm install) is
                 # skipped. So we need to npm install here too.
