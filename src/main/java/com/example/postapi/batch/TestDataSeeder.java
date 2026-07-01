@@ -4,14 +4,26 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 
+/**
+ * Seeds the {@code posts} table with a fixed set of rows used by the
+ * Spring Batch CleanupBatchIntegrationTest scenarios (and historically
+ * by Karate, though Karate now creates its own posts).
+ *
+ * <p>Gated by {@code test-data.seeder.enabled} so that prod never runs
+ * it on startup — production data is real and we don't want a fresh
+ * deployment to silently inject six synthetic rows. Unit / integration
+ * tests opt in via {@code application-test.properties}.</p>
+ */
 @Slf4j
 @Component
+@ConditionalOnProperty(name = "test-data.seeder.enabled", havingValue = "true")
 public class TestDataSeeder implements CommandLineRunner {
 
     @PersistenceContext
